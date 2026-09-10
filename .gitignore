@@ -1,0 +1,23 @@
+# Binaries
+/reconx
+/bin/
+*.exe
+*.test
+*.out
+
+# Data / runtime state
+/data/
+*.db
+*.db-wal
+*.db-shm
+/projects/
+/output/
+
+# Go
+/vendor/
+coverage.txt
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
