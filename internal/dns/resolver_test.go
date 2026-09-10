@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alieddine/nett/internal/config"
+	"github.com/offsecfergali/nett/internal/config"
 )
 
 // startFakeServer runs a minimal UDP DNS server on loopback driven entirely

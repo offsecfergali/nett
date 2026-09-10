@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/alieddine/nett/internal/cli"
+	"github.com/offsecfergali/nett/internal/cli"
 )
 
 func main() {

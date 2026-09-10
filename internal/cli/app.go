@@ -16,10 +16,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/alieddine/nett/internal/config"
-	"github.com/alieddine/nett/internal/logging"
-	"github.com/alieddine/nett/internal/module"
-	"github.com/alieddine/nett/internal/version"
+	"github.com/offsecfergali/nett/internal/config"
+	"github.com/offsecfergali/nett/internal/logging"
+	"github.com/offsecfergali/nett/internal/module"
+	"github.com/offsecfergali/nett/internal/version"
 )
 
 // App carries the resolved dependencies shared by every command.

@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/alieddine/nett/internal/config"
+	"github.com/offsecfergali/nett/internal/config"
 )
 
 func TestFailClosedByDefault(t *testing.T) {

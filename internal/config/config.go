@@ -113,7 +113,7 @@ func Default() *Config {
 			TimeoutSeconds:  10,
 			Retries:         2,
 			RateLimitPerSec: 20,
-			UserAgent:       "nett/0.1 (+https://github.com/alieddine/nett)",
+			UserAgent:       "nett/0.1 (+https://github.com/offsecfergali/nett)",
 			FollowRedirects: true,
 			MaxRedirects:    10,
 		},

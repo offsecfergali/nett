@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alieddine/nett/internal/model"
+	"github.com/offsecfergali/nett/internal/model"
 )
 
 // InsertEvent inserts e if an event with the same deterministic ID

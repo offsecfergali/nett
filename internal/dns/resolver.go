@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alieddine/nett/internal/config"
-	"github.com/alieddine/nett/internal/ratelimit"
+	"github.com/offsecfergali/nett/internal/config"
+	"github.com/offsecfergali/nett/internal/ratelimit"
 )
 
 // defaultNegativeTTL is used to cache an NXDOMAIN/empty answer when the

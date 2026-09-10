@@ -2,9 +2,9 @@
 //
 // The values are overridable at build time with -ldflags, e.g.:
 //
-//	go build -ldflags "-X github.com/alieddine/nett/internal/version.Version=1.2.3 \
-//	  -X github.com/alieddine/nett/internal/version.Commit=$(git rev-parse --short HEAD) \
-//	  -X github.com/alieddine/nett/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+//	go build -ldflags "-X github.com/offsecfergali/nett/internal/version.Version=1.2.3 \
+//	  -X github.com/offsecfergali/nett/internal/version.Commit=$(git rev-parse --short HEAD) \
+//	  -X github.com/offsecfergali/nett/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
 //	  ./cmd/nett
 package version
 

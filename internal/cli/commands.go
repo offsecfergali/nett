@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/alieddine/nett/internal/module"
-	"github.com/alieddine/nett/internal/version"
+	"github.com/offsecfergali/nett/internal/module"
+	"github.com/offsecfergali/nett/internal/version"
 )
 
 // commands is the registered command table. Only implemented commands appear

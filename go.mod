@@ -1,4 +1,4 @@
-module github.com/alieddine/nett
+module github.com/offsecfergali/nett
 
 go 1.25.0
 

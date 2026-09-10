@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alieddine/nett/internal/model"
+	"github.com/offsecfergali/nett/internal/model"
 )
 
 // UpsertEdge inserts a new edge or, if one already exists between the same

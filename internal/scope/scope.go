@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alieddine/nett/internal/config"
+	"github.com/offsecfergali/nett/internal/config"
 )
 
 // Scope is a concurrency-safe set of include/exclude rules. The zero value is

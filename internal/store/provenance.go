@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alieddine/nett/internal/model"
+	"github.com/offsecfergali/nett/internal/model"
 )
 
 // AddProvenance appends one observation record for an asset or edge. Unlike

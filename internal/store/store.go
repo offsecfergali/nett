@@ -19,7 +19,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/alieddine/nett/internal/model"
+	"github.com/offsecfergali/nett/internal/model"
 )
 
 // Store is a handle to one project's-worth (or many projects') SQLite asset

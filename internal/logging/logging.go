@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alieddine/nett/internal/config"
+	"github.com/offsecfergali/nett/internal/config"
 )
 
 // Logger wraps an *slog.Logger together with any resource (e.g. a log file) that
