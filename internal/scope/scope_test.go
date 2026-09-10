@@ -132,6 +132,21 @@ func TestLearnIPOnlyFromInScopeHost(t *testing.T) {
 	}
 }
 
+func TestAddIPInjectsScanTarget(t *testing.T) {
+	s, err := New(config.ScopeConfig{})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ip := net.ParseIP("203.0.113.5")
+	s.AddIP(ip)
+	if !s.AllowIP(ip) {
+		t.Error("AddIP should bring that exact IP into scope")
+	}
+	if s.AllowIP(net.ParseIP("203.0.113.6")) {
+		t.Error("AddIP must not bring in unrelated IPs")
+	}
+}
+
 func TestAddDomainInjectsScanTarget(t *testing.T) {
 	s, err := New(config.ScopeConfig{})
 	if err != nil {

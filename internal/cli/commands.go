@@ -40,6 +40,26 @@ var commands = []*Command{
 			"config file, NETT_* environment variables, and command-line flags.",
 		Run: runConfig,
 	},
+	{
+		Name:  "scan",
+		Short: "Run reconnaissance against a target",
+		Long: "Run one or more reconnaissance actions against <target> (a domain or IP), " +
+			"gated by the scope engine and persisted to the project's SQLite store.\n\n" +
+			"Flags:\n" +
+			"  -d              Passive subdomain discovery (Certificate Transparency + DNS validation)\n" +
+			"  -brute <file>   DNS brute force using the wordlist at <file>\n" +
+			"  -tcp [spec]     Native TCP connect scan; spec is a port list/range (default: common ports)\n" +
+			"  -p              TCP connect scan of every port, 1-65535\n\n" +
+			"-udp, -f, -en, and -dir are documented in the project spec but not implemented yet; " +
+			"passing them fails with a clear error naming the milestone that will add them.\n\n" +
+			"Examples:\n" +
+			"  nett scan example.com -d\n" +
+			"  nett scan example.com -brute words.txt\n" +
+			"  nett scan example.com -tcp 1-1000\n" +
+			"  nett scan example.com -p",
+		Args: "<target> [flags]",
+		Run:  runScan,
+	},
 }
 
 // lookup returns the command with the given name, or nil.

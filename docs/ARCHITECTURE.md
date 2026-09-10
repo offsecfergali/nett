@@ -65,14 +65,14 @@ nett/
 │   ├── model/               core domain types: Asset, Edge, Event, Provenance  [M2 implemented]
 │   ├── scope/               scope engine (domain/host/IP/CIDR/URL/path)         [M3 implemented]
 │   ├── dns/                 native resolver (A/AAAA/CNAME/MX/NS/TXT/SRV/CAA/PTR/SOA), UDP/TCP/DoH/DoT, cache, wildcard detect [M4 implemented]
-│   ├── subdomain/           passive provider interface + providers             [M5 planned]
-│   ├── ct/                  Certificate Transparency discovery + x509 parsing  [M5 planned]
+│   ├── subdomain/           CT-merge + scope filter + DNS validation + wildcard flag [M5 implemented]
+│   ├── ct/                  Certificate Transparency discovery via crt.sh      [M5 implemented]
 │   ├── asn/                 ASN/IP intelligence, netblocks, relationships      [M6 planned]
-│   ├── permute/            DNS permutation engine                              [M7? planned]
+│   ├── permute/            DNS brute-force / permutation engine                [M7 implemented]
 │   ├── httpx/               native HTTP probing engine + reusable client       [M7 planned]
 │   ├── fingerprint/         technology fingerprinting (external definitions)   [M10 planned]
 │   ├── tlsx/                native TLS inspection                              [M8 planned]
-│   ├── portscan/            native TCP connect scanner                        [M9 planned]
+│   ├── portscan/            native TCP connect scanner                        [M9 implemented]
 │   ├── servicefp/           service/banner fingerprinting                     [M10 planned]
 │   ├── crawler/             native concurrent web crawler                     [M11 planned]
 │   ├── jsintel/             JavaScript intelligence engine                    [M12 planned]
@@ -255,7 +255,7 @@ Full engineering notes for these live in `docs/MODULES.md`.
 
 ---
 
-## 9. CLI surface (M1 implemented; grows per milestone)
+## 9. CLI surface (grows per milestone)
 
 ```
 nett --help
@@ -264,13 +264,18 @@ nett capabilities        # tree of capabilities that are actually implemented
 nett modules             # module catalog with status (implemented/planned) + milestone
 nett modules <name>      # detail for one module
 nett config              # the fully-resolved effective configuration
+nett scan <target> [-d] [-brute <file>] [-tcp [spec]] [-p]
 ```
 
-`nett scan` and `nett pipeline` are intentionally **absent** until the
-modules behind them exist (M7 and M21). The CLI never advertises a command that
-would print "not implemented"; it only exposes what is real. `nett
-capabilities` is generated from the module catalog and lists implemented
-capabilities only.
+`nett scan` exists as of M5/M7/M9 and currently supports `-d` (CT +
+DNS-validated subdomain discovery), `-brute <wordlist>` (DNS brute force with
+common-affix permutations), `-tcp [spec]` and `-p` (native TCP connect
+scanning). `-udp`, `-f`, `-en`, and `-dir` are parsed but rejected with an
+explicit "not implemented yet (planned M#)" error rather than silently doing
+nothing — the CLI never advertises a flag or command that would produce fake
+output. `nett pipeline` is intentionally **absent** until the event/pivot
+engine exists (M21). `nett capabilities` is generated from the module catalog
+and lists implemented capabilities only.
 
 ---
 
@@ -298,11 +303,11 @@ capabilities only.
 | M2  | SQLite store + data model | **implemented** |
 | M3  | Scope engine | **implemented** |
 | M4  | DNS engine | **implemented** |
-| M5  | CT + subdomain discovery | planned |
+| M5  | CT + subdomain discovery | **implemented** |
 | M6  | ASN / IP / reverse DNS | planned |
-| M7  | HTTP engine | planned |
+| M7  | HTTP engine + DNS permutation | **permute implemented; http client planned** |
 | M8  | TLS engine | planned |
-| M9  | Port scanner | planned |
+| M9  | Port scanner | **implemented** |
 | M10 | Service fingerprinting | planned |
 | M11 | Crawler | planned |
 | M12 | JS intelligence | planned |

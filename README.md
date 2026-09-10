@@ -8,7 +8,7 @@ After `go build ./...`, the resulting binary performs its work without requiring
 
 > **Repository status:** nett is an in-progress project delivered in milestones (see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
 >
-> **Milestones 1–4** — CLI/configuration/logging, the SQLite asset-graph store, the scope engine, and the native DNS engine — are fully implemented and tested.
+> **Milestones 1–5, 9, and part of 7** — CLI/configuration/logging, the SQLite asset-graph store, the scope engine, the native DNS engine, Certificate Transparency + subdomain discovery, DNS brute force/permutation, and the native TCP port scanner — are fully implemented and tested. `nett scan` is live with `-d`, `-brute`, `-tcp`, and `-p`.
 >
 > All remaining milestones are documented in `docs/` and marked **planned** in the module catalog. The CLI only advertises capabilities that are actually implemented. Run `nett capabilities` to see the current capabilities.
 
@@ -83,6 +83,26 @@ Commands:
 * `make install` — builds and installs nett to `/usr/local/bin`.
 * `make check` — runs `go vet`, tests, and the race detector.
 * `make bench` — runs benchmarks.
+
+## Scanning
+
+`nett scan <target> [flags]` runs reconnaissance against a domain or IP, gated
+by the scope engine and persisted to the project's SQLite store:
+
+```bash
+nett scan example.com -d                    # passive subdomain discovery (CT + DNS validation)
+nett scan example.com -brute words.txt      # DNS brute force with common-affix permutations
+nett scan example.com -tcp                  # TCP connect scan of common ports
+nett scan example.com -tcp 1-1000           # TCP connect scan of a port range
+nett scan example.com -tcp 22,80,443        # TCP connect scan of a port list
+nett scan example.com -p                    # TCP connect scan of every port, 1-65535
+nett scan example.com -d -brute words.txt -p  # combine actions in one run
+```
+
+`-udp`, `-f` (fingerprinting), `-en` (port/service enumeration), and `-dir`
+(content discovery) are part of the design (see `docs/ARCHITECTURE.md`) but
+not implemented yet; passing them fails with an explicit error naming the
+milestone that will add them, rather than silently doing nothing.
 
 ## Configuration
 

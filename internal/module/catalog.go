@@ -68,22 +68,51 @@ func catalog() []*Descriptor {
 			},
 		},
 
+		{
+			Name:      "ct",
+			Short:     "Certificate Transparency discovery via crt.sh",
+			Milestone: "M5",
+			Status:    StatusImplemented,
+			Active:    true,
+			Capabilities: []Capability{
+				{Group: "CT", Items: []string{"crt.sh"}},
+			},
+		},
+		{
+			Name:      "subdomain",
+			Short:     "Passive subdomain discovery: CT + DNS validation + wildcard filtering",
+			Milestone: "M5",
+			Status:    StatusImplemented,
+			Active:    true,
+			Capabilities: []Capability{
+				{Group: "Subdomain", Items: []string{"ct-merge", "scope-filter", "dns-validation", "wildcard-flagging"}},
+			},
+		},
+		{
+			Name:      "permute",
+			Short:     "DNS brute force / permutation engine for candidate hostnames",
+			Milestone: "M7",
+			Status:    StatusImplemented,
+			Active:    true,
+			Capabilities: []Capability{
+				{Group: "Permute", Items: []string{"wordlist", "common-affix-permutations", "wildcard-filtering"}},
+			},
+		},
+		{
+			Name:      "portscan",
+			Short:     "Native TCP connect scanner (explicit activation only)",
+			Milestone: "M9",
+			Status:    StatusImplemented,
+			Active:    true,
+			Capabilities: []Capability{
+				{Group: "Portscan", Items: []string{"single-port", "port-range", "port-list", "common-ports", "all-ports", "rate-limited", "bounded-concurrency"}},
+			},
+		},
+
 		// --- Planned (future milestones) ---
-		{
-			Name: "subdomain", Short: "Passive subdomain enumeration via provider interface",
-			Milestone: "M5", Status: StatusPlanned, Active: true,
-		},
-		{
-			Name: "ct", Short: "Certificate Transparency discovery with native x509 parsing",
-			Milestone: "M5", Status: StatusPlanned, Active: true,
-		},
 		{
 			Name: "asn", Short: "ASN/IP intelligence and netblock relationships",
 			Milestone: "M6", Status: StatusPlanned, Active: true,
-		},
-		{
-			Name: "permute", Short: "DNS permutation engine for candidate hostnames",
-			Milestone: "M7", Status: StatusPlanned, Active: true,
 		},
 		{
 			Name: "http", Short: "Native HTTP probing engine and reusable client",
@@ -95,10 +124,6 @@ func catalog() []*Descriptor {
 		{
 			Name: "tls", Short: "Native TLS inspection (cert/SAN/cipher/ALPN)",
 			Milestone: "M8", Status: StatusPlanned, Active: true,
-		},
-		{
-			Name: "portscan", Short: "Native TCP connect scanner (explicit activation only)",
-			Milestone: "M9", Status: StatusPlanned, Active: true,
 		},
 		{
 			Name: "servicefp", Short: "Service/banner fingerprinting via safe probes",

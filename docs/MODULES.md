@@ -344,13 +344,235 @@ and tested today.
 
 ---
 
+## Milestone 5 — implemented
+
+### `internal/ct`
+
+- **Purpose.** Certificate Transparency discovery: find hostnames the public
+  CT ecosystem has already observed on issued certificates for a domain, via
+  crt.sh's JSON API. This is passive — it contacts a public third-party
+  aggregator, never the target.
+- **Input.** A domain string; an `*http.Client` (timeout-bounded).
+- **Algorithm.** GETs `crt.sh/?q=%.<domain>&output=json`, decodes the JSON
+  array of `{common_name, name_value}` rows (crt.sh newline-joins multiple
+  SANs into one `name_value` string when a certificate covers several
+  names), splits and normalizes every name (lowercase, strip trailing dot,
+  strip a leading `*.` wildcard marker), rejects anything that isn't
+  plausibly a hostname (contains a space, `@`, `/`, `\`, or quote — catching
+  a CA's non-hostname CN slipping into the same field), and returns the
+  deduplicated, sorted result. An empty response body (crt.sh's shape for
+  "no matches," not `[]`) is treated as zero results, not an error.
+- **Concurrency model.** None — one HTTP request per `Query` call; the
+  caller (subdomain discovery) is what runs concurrently.
+- **Output.** `[]string` of normalized hostnames via the `Provider` interface
+  (`Name() string`, `Query(ctx, domain) ([]string, error)`), so a second
+  passive source can be added later without changing callers.
+- **Data model.** `crtShEntry{CommonName, NameValue}` (unexported, JSON-only).
+- **Failure behavior.** A non-200 response, a read/decode failure, or a
+  request-construction error each return a wrapped error; the caller (M5's
+  `subdomain.Discover`) treats one failing provider as a warning, not a fatal
+  discovery failure.
+- **Security considerations.** Read-only HTTP GET to a public aggregator; no
+  credentials, no write operations, no contact with the target itself.
+- **Tests.** `crtsh_test.go` runs entirely against an `httptest.Server` (no
+  real network): multi-SAN entries parsed and merged, an empty response,
+  a non-hostname CN (email address) rejected while a co-located valid name
+  survives, a non-200 response treated as an error, malformed JSON rejected,
+  and `normalizeHostname`'s edge cases unit-tested directly.
+
+### `internal/subdomain`
+
+- **Purpose.** Orchestrates `-d`: merges every CT provider's hits, enforces
+  scope before any active DNS contact, resolves survivors, and flags results
+  that are indistinguishable from the domain's own DNS wildcard.
+- **Input.** A `*dns.Resolver`, a `*scope.Scope`, a `[]ct.Provider`, the
+  target domain, and a concurrency bound.
+- **Algorithm.** Refuses to run at all if the domain itself is not in scope
+  (fail fast, matching the scope engine's fail-closed design). Runs
+  `dns.DetectWildcard` once for the domain. Queries every provider,
+  collecting per-hostname source attribution and per-provider errors
+  separately (`map[string]error`) so one broken provider does not abort the
+  others. Every candidate is filtered through `sc.AllowHost` *before* being
+  resolved — discovery of a name from a passive source is not itself active
+  contact, but resolving it is. Surviving candidates are resolved
+  concurrently via `internal/workerpool`; each resolved IP is fed back into
+  the scope via `sc.LearnIP` (so a subsequent `-tcp` in the same run can
+  scan it), and `WildcardResult.Is` flags whether the answer is
+  indistinguishable from the wildcard's own.
+- **Concurrency model.** Bounded via `workerpool.Run`; a `sync.Mutex` guards
+  the shared findings map during concurrent resolution.
+- **Output.** `([]Finding, map[string]error, error)` — findings (which may be
+  unresolved), per-provider errors, and a hard error only for an
+  out-of-scope target.
+- **Data model.** `Finding{Hostname, Sources []string, IPs []net.IP,
+  Resolved, WildcardMatch bool}`.
+- **Failure behavior.** A provider failure or a per-host resolution failure
+  never aborts the batch; only an out-of-scope *target* is a hard error,
+  since nothing useful can happen at all in that case.
+- **Security considerations.** This is the scope boundary between "passive
+  lookup about a name" and "active DNS contact" — every resolved lookup goes
+  through `sc.AllowHost` first, with no exception.
+- **Tests.** `subdomain_test.go` runs its own loopback fake DNS server (a
+  `fakeProvider` supplies canned CT-shaped results): providers merged with
+  combined source attribution, out-of-scope candidates filtered before
+  resolution, an out-of-scope target refused outright, wildcard matches
+  correctly flagged (and non-matches correctly not flagged), and a failing
+  provider not aborting a working one. Race-clean under `go test -race`.
+
+---
+
+## Milestone 7 — implemented (partial: permute only; http client still planned)
+
+### `internal/permute`
+
+- **Purpose.** Implements `-brute`: DNS brute-forcing a domain against a
+  user-supplied wordlist, with optional common-affix permutations, gated by
+  scope and wildcard-aware like `-d`.
+- **Input.** A wordlist file path (`LoadWordlist`); a `*dns.Resolver`, a
+  `*scope.Scope`, the target domain, the word list, an `enablePermutations`
+  flag, and a concurrency bound (`BruteForce`).
+- **Algorithm.** `LoadWordlist` reads one label per line, lowercasing,
+  trimming, skipping blanks and `#` comments, and deduplicating; an empty
+  result is an error (a silently-no-op brute force would look like a
+  false-negative "nothing found"). `BruteForce` refuses an out-of-scope
+  target up front, runs `dns.DetectWildcard` once, and for each word builds
+  either just `<word>.<domain>` or, with permutations enabled,
+  `GeneratePermutations(word)` — the word itself plus
+  `dev-/staging-/stage-/test-/uat-/qa-/01/02`-prefixed and suffixed variants
+  — covering the environment-naming conventions a pentester would try by
+  hand from a short base wordlist. Every generated candidate is
+  scope-checked and deduplicated before resolution; resolution itself is
+  bounded and concurrent via `internal/workerpool`, feeding resolved IPs
+  back into scope via `sc.LearnIP` exactly like `-d`. Only resolved
+  candidates are returned (an unresolved brute-force guess is noise, unlike
+  `-d` where even a dead CT-observed hostname is itself informative).
+- **Concurrency model.** Bounded via `workerpool.Run`; a `sync.Mutex` guards
+  the shared findings map.
+- **Output.** `[]Finding{Hostname, IPs, Resolved, WildcardMatch}`.
+- **Data model.** Same `Finding` shape as `internal/subdomain`, independently
+  defined since the two packages don't share a type dependency.
+- **Failure behavior.** A missing/empty wordlist file or an out-of-scope
+  target are hard errors returned before any network activity; a single
+  candidate's resolution failure is silently treated as "not live," not
+  surfaced as an error (a brute-force sweep expects most guesses to miss).
+- **Security considerations.** Same scope-before-resolve guarantee as `-d`;
+  brute-forcing is inherently noisier than passive discovery, which is why
+  wildcard flagging matters even more here.
+- **Tests.** `permute_test.go` (own loopback fake DNS server): wordlist
+  loading (dedup/trim/lowercase/comment-skip), missing-file and empty-file
+  rejection, live-host discovery, out-of-scope target refusal, a permutation
+  actually finding a variant not in the base wordlist, wildcard-match
+  flagging, and `GeneratePermutations` always including the base word.
+  Race-clean under `go test -race`.
+
+### `internal/workerpool`
+
+- **Purpose.** The one bounded-concurrency primitive every active module
+  (port scanning, brute force, subdomain resolution, and future HTTP
+  probing) runs its fan-out through, per `ARCHITECTURE.md` §4's "no one
+  goroutine per target."
+- **Input.** A context, a concurrency limit, a slice of items, and a
+  per-item function.
+- **Algorithm.** A buffered channel of size `concurrency` acts as a
+  semaphore; each item spawns a goroutine only once a slot is free. Context
+  cancellation is checked *explicitly* before each admission (not only as a
+  `select` case) — a send on a non-full buffered channel is always
+  immediately ready, so relying on `select` alone would let a cancelled
+  context lose that race indefinitely once workers drain faster than new
+  ones are admitted.
+- **Concurrency model.** Is the concurrency model: a `sync.WaitGroup` plus a
+  channel-based semaphore, nothing more.
+- **Output.** None (side-effecting `fn` calls); `Run` blocks until every item
+  is processed or the context is done.
+- **Data model.** Generic: `Run[T any](ctx, concurrency int, items []T, fn
+  func(context.Context, T))`.
+- **Failure behavior.** N/A — `fn` handles its own errors; `Run` itself
+  cannot fail.
+- **Security considerations.** This is what makes "bounded concurrency" true
+  rather than aspirational across every active module.
+- **Tests.** `pool_test.go`: every item processed, observed concurrency
+  never exceeds the configured bound (measured with an atomic
+  high-water-mark counter), an already-cancelled context schedules zero
+  work (deterministically, not just "mostly"), and an empty item list calls
+  `fn` zero times. Race-clean under `go test -race`.
+
+---
+
+## Milestone 9 — implemented
+
+### `internal/portscan`
+
+- **Purpose.** Native TCP connect scanning for `-tcp` and `-p`. No nmap, no
+  naabu, no masscan — every connection attempt is a plain `net.Dial`.
+- **Input.** `ParsePorts(spec)` parses a CLI port spec; `Scanner.Scan(ctx,
+  ip, ports)` runs the scan itself.
+- **Algorithm.** `ParsePorts` accepts empty (→ `CommonPorts`, a curated ~80
+  entries), `"-"`/`"*"` (→ every port 1-65535), and a comma-separated mix of
+  single ports and `lo-hi` ranges, deduplicated and sorted; malformed or
+  out-of-range input is rejected rather than silently clamped. `Scan` fans
+  every port out through `internal/workerpool` (bounded by
+  `Config.Concurrency`), rate-limits each probe via `internal/ratelimit`,
+  and dials with a per-probe timeout derived from the parent context.
+  `classifyError` turns a dial failure into `StateClosed` (an
+  `ECONNREFUSED`, checked both directly and unwrapped from a `*net.OpError`
+  → `*os.SyscallError`), `StateFiltered` (the dial timed out — probably
+  dropped by a firewall, not actively refused), or `StateUnknown` (anything
+  else); a successful connect is `StateOpen` and the connection is closed
+  immediately.
+- **Concurrency model.** `workerpool.Run` bounds concurrent dials; scope
+  enforcement is deliberately **not** this package's job — it is a plain,
+  independently-testable network primitive, and the caller (the `scan` CLI
+  command) checks `sc.AllowIP` once per target IP before invoking `Scan` at
+  all, per `ARCHITECTURE.md` §3 ("shared capabilities have no knowledge of
+  the pipeline").
+- **Output.** `[]Result{IP, Port, State, Latency, Err}`.
+- **Data model.** `State` is one of `open`/`closed`/`filtered`/`unknown`.
+- **Failure behavior.** A single port's classification never aborts the
+  scan; `Scan` returns whatever results were gathered if the context is
+  cancelled mid-sweep.
+- **Security considerations.** Explicit-activation only (never runs unless
+  `-tcp`/`-p` is passed), rate-limited, timeout-bounded, and scope-gated by
+  the caller — matching `ARCHITECTURE.md` §7's "aggressive active scanning
+  requires explicit activation."
+- **Tests.** `ports_test.go`: every `ParsePorts` shape (empty, single, list,
+  range, mixed+deduped, all-ports, and seven invalid-input cases).
+  `scanner_test.go`: a real local listener detected as open, a real closed
+  local port detected as closed (exercising the actual `ECONNREFUSED` path
+  end-to-end rather than a synthetic error), multiple ports scanned
+  correctly in one call, a pre-cancelled context scanning nothing, and the
+  timeout/generic branches of `classifyError` unit-tested directly with a
+  synthetic `net.Error`. Race-clean under `go test -race`.
+
+---
+
+## `internal/cli` scan orchestration (M5/M7/M9 wiring)
+
+`scan.go` is the first orchestration layer tying discovery modules together
+ahead of the real event/pivot engine (M21): it hand-parses `nett scan`
+arguments (`-tcp`/`-udp` need an *optional* trailing value, which the
+standard `flag` package cannot express), builds one `scope.Scope` per
+invocation (auto-including the CLI target via `AddDomain`/`AddIP`), opens the
+project's SQLite store, and dispatches to `-d` → `subdomain.Discover`,
+`-brute` → `permute.BruteForce`, `-tcp`/`-p` → `portscan.Scanner`, persisting
+every finding as assets/edges/provenance via the store. `-udp`, `-f`, `-en`,
+and `-dir` are recognized but rejected with an explicit "not implemented yet
+(planned M#)" error — never silently accepted, never printing fake output.
+Tested in `scan_test.go`: every usage example from the spec parses correctly,
+`-tcp`'s optional value does not swallow a following flag, all four
+not-yet-implemented flags are rejected, a real end-to-end scan against a
+local TCP listener (verifying both the printed result and that a SQLite
+database is actually created), a config-level scope exclude overriding the
+CLI target's auto-inclusion, and a missing wordlist file surfaced as a clear
+error.
+
+---
+
 ## Planned modules
 
-The design for every planned module (`subdomain`, `ct`,
-`asn`, `permute`, `http`, `tls`, `portscan`, `servicefp`, `fingerprint`,
-`crawler`, `jsintel`, `urldisc`, `content`, `apidisc`, `graphql`, `param`,
-`repo`, `cloud`, `classify`, `score`, `graph`, `event`, `diff`, `resume`) is
-captured in `ARCHITECTURE.md` (§2, §5–§7) and `DATA_MODEL.md`. Each will receive
-its own nine-facet section here as its milestone is completed, and its catalog
-`Status` will flip to `implemented`, making its capabilities appear in
-`nett capabilities`.
+The design for every planned module (`asn`, `http`, `tls`, `servicefp`,
+`fingerprint`, `crawler`, `jsintel`, `urldisc`, `content`, `apidisc`,
+`graphql`, `param`, `repo`, `cloud`, `classify`, `score`, `graph`, `event`,
+`diff`, `resume`) is captured in `ARCHITECTURE.md` (§2, §5–§7) and
+`DATA_MODEL.md`. Each will receive its own nine-facet section here as its
+milestone is completed, and its catalog `Status` will flip to `implemented`,
+making its capabilities appear in `nett capabilities`.

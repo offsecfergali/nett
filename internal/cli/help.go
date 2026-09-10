@@ -36,8 +36,9 @@ func printRootUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run 'nett <command> --help' for command-specific help.")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Note: scan and pipeline commands are added in later milestones as their")
-	fmt.Fprintln(w, "modules are implemented; nett never advertises a command it cannot run.")
+	fmt.Fprintln(w, "Note: 'scan' currently supports -d, -brute, -tcp, and -p; -udp/-f/-en/-dir")
+	fmt.Fprintln(w, "and the 'pipeline' command are added as their modules are implemented — nett")
+	fmt.Fprintln(w, "never silently accepts a flag or command it cannot actually run.")
 }
 
 // printCommandUsage prints help for a single command.

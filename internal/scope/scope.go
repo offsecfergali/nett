@@ -87,6 +87,18 @@ func (s *Scope) AddDomain(domain string) {
 	s.domains = append(s.domains, d)
 }
 
+// AddIP adds a specific IP address as in scope at runtime, mirroring
+// AddDomain for a scan target that is itself an IP address rather than a
+// hostname.
+func (s *Scope) AddIP(ip net.IP) {
+	if ip == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ips[ip.String()] = struct{}{}
+}
+
 // LearnIP marks ip as dynamically in scope because it was observed by
 // resolving host, which was itself already in scope. It is a no-op if host is
 // not in scope — callers should still check AllowHost before resolving.
