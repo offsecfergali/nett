@@ -96,20 +96,34 @@ func TestCapabilitiesOnlyFromImplementedAndMerged(t *testing.T) {
 
 func TestDefaultRegistryShape(t *testing.T) {
 	r := DefaultRegistry()
+
 	core, ok := r.Get("core")
 	if !ok || !core.Implemented() {
 		t.Fatal("core module must exist and be implemented")
 	}
+
 	dns, ok := r.Get("dns")
-	if !ok || dns.Implemented() {
-		t.Fatal("dns module must exist and be planned (not implemented) in M1")
+	if !ok {
+		t.Fatal("dns module must exist")
 	}
-	// Capabilities must be non-empty (from core) but must not include DNS yet.
+	if !dns.Implemented() {
+		t.Fatalf("dns module must be implemented, got status %q", dns.Status)
+	}
+	if dns.Milestone != "M4" {
+		t.Fatalf("dns module milestone = %q, want M4", dns.Milestone)
+	}
+
+	foundDNS := false
 	for _, c := range r.Capabilities() {
 		if c.Group == "DNS" {
-			t.Error("DNS must not appear in capabilities until implemented")
+			foundDNS = true
+			break
 		}
 	}
+	if !foundDNS {
+		t.Error("DNS must appear in capabilities after implementation")
+	}
+
 	if len(r.Capabilities()) == 0 {
 		t.Error("core capabilities should be present")
 	}

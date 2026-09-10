@@ -68,7 +68,7 @@ func TestModuleDetail(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
-	for _, want := range []string{"Module:", "dns", "M4", "planned"} {
+	for _, want := range []string{"Module:", "dns", "M4", "implemented"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("module detail missing %q\n%s", want, out)
 		}
